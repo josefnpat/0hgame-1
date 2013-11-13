@@ -1,0 +1,180 @@
+--[[
+Caanoo nlove Joystick
+=====================
+A = 0
+B = 2
+X = 1
+Y = 3
+R = 5
+L = 4
+HOME = 6
+HELP1 = 8
+HELP2 = 9
+HOLD = 7
+
+Snes USB-Hub 2*Adapter
+======================
+1st org. Snes Joypad
+--------------------
+X = 0
+A = 1
+B = 2
+Y = 3
+R = 7
+L = 6
+SELECT = 8
+START = 9
+
+DINGOO nlove Buttons
+====================
+D-pad up            KEY_UP
+D-pad down          KEY_DOWN
+D-pad left          KEY_LEFT
+D-pad right         KEY_RIGHT
+A button            KEY_LEFTCTRL
+B button            KEY_LEFTALT
+X button            KEY_SPACE
+Y button            KEY_LEFTSHIFT
+Left shoulder       KEY_TAB
+Right shoulder      KEY_BACKSPACE
+START button        KEY_ENTER
+SELECT button       KEY_ESC
+POWER UP button HOLD KEY_PAUSE
+]]--
+
+function clamp_paddle(n)
+	paddle[n].y = math.min(215, math.max(25, paddle[n].y))
+end
+
+function clamp_ball()
+	if ball.x < 5 then
+		ball.x = 5
+		ball.dx = math.abs(ball.dx)
+		paddle[2].score = paddle[2].score + 1
+	end
+	if ball.x > 315 then
+		ball.x = 315
+		ball.dx = -math.abs(ball.dx)
+		paddle[1].score = paddle[1].score + 1
+	end
+	if ball.y < 5 then
+		ball.y = 5
+		ball.dy = math.abs(ball.dy)
+	end
+	if ball.y > 235 then
+		ball.y = 235
+		ball.dy = -math.abs(ball.dy)
+	end
+end
+
+function ball_paddle(n)
+	local x = n == 1 and 10 or 300
+	if ball.x+5 < x or ball.x-5 > x+10 then return end
+	if ball.y+5 < paddle[n].y-25 or ball.y-5 > paddle[n].y+25 then return end
+	if ball.y < paddle[n].y-25 then
+		if ball.x < x then
+			local dist = (ball.x-x)^2+(ball.y-paddle[n].y+25)^2
+			if dist > 25 then return end
+		else
+			local dist = (ball.x-x-10)^2+(ball.y-paddle[n].y+25)^2
+			if dist > 25 then return end
+		end
+	elseif ball.y > paddle[n].y+25 then
+		if ball.x < x then
+			local dist = (ball.x-x)^2+(ball.y-paddle[n].y-25)^2
+			if dist > 25 then return end
+		else
+			local dist = (ball.x-x-10)^2+(ball.y-paddle[n].y-25)^2
+			if dist > 25 then return end
+		end
+	end
+	--we collide
+	local dir = n == 1 and 1 or -1
+	local angle = math.atan2(ball.y-paddle[n].y, ball.x-x-10)
+	ball.dx = dir
+	ball.dy = math.sin(angle)
+end
+
+paddle = {}
+
+function love.load()
+	love.mouse.setVisible(false)
+	paddle[1] = {}
+	paddle[1].y = 120
+	paddle[1].score = 0
+	paddle[2] = {}
+	paddle[2].y = 120
+	paddle[2].score = 0
+	ball = {}
+	ball.x = 160
+	ball.y = 120
+	ball.dx = -1
+	ball.dy = 0.3
+	speed = 240
+--	font = love.graphics.newFont(love._vera_ttf, 14)
+--	love.graphics.setFont(font)
+end
+
+function love.keypressed(key)
+	if key == "q" or key == "escape" then
+		love.event.push("q")
+		print(("Score: %d - %d"):format(paddle[1].score, paddle[2].score))
+	end
+end
+
+-- Joystick Handling
+function love.joystickreleased( joystick, button )
+	if button==6 or button==9 then
+		love.event.push("q")
+		print(("Score: %d - %d"):format(paddle[1].score, paddle[2].score))
+	end
+end
+
+function love.update(dt)
+	--player 1 - keyboard
+	if love.keyboard.isDown("lalt") then
+		paddle[2].y = paddle[2].y + speed*dt
+		clamp_paddle(2)
+	elseif love.keyboard.isDown("lctrl") or love.keyboard.isDown(" ") then
+		paddle[2].y = paddle[2].y - speed*dt
+		clamp_paddle(2)
+	end
+	--player 2 - keyboard
+	if love.keyboard.isDown("down") then
+		paddle[1].y = paddle[1].y + speed*dt
+		clamp_paddle(1)
+	elseif love.keyboard.isDown("up") then
+		paddle[1].y = paddle[1].y - speed*dt
+		clamp_paddle(1)
+	end
+	--player 1 - joystick
+	if love.joystick.getAxis( 0, 1 )==1 then
+		paddle[1].y = paddle[1].y + speed*dt
+		clamp_paddle(1)
+	elseif love.joystick.getAxis( 0, 1 ) == -1 then
+		paddle[1].y = paddle[1].y - speed*dt
+		clamp_paddle(1)
+	end
+	--player 2 - joystick buttons
+	if love.joystick.isDown( 0, 1 ) then
+		paddle[2].y = paddle[2].y + speed*dt
+		clamp_paddle(2)
+	elseif love.joystick.isDown( 0, 3 ) then
+		paddle[2].y = paddle[2].y - speed*dt
+		clamp_paddle(2)
+	end
+
+	ball.x = ball.x+ball.dx*speed*dt
+	ball.y = ball.y+ball.dy*speed*dt
+	clamp_ball()
+	ball_paddle(1)
+	ball_paddle(2)
+end
+
+function love.draw()
+	love.graphics.circle('fill', ball.x, ball.y, 5, 8)
+	love.graphics.rectangle('fill', 10, paddle[1].y-25, 10, 50)
+	love.graphics.rectangle('fill', 300, paddle[2].y-25, 10, 50)
+	love.graphics.print(paddle[1].score .. " : " .. paddle[2].score, 140, 5)
+	print(love.joystick.getAxis( 0, 1 ))
+end
