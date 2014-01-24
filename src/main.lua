@@ -8,7 +8,9 @@ f = love.graphics.newFont("SigmarOne.ttf",16)
 love.graphics.setFont(f)
 using_nlove = debug.getregistry()["love.graphics.sdl"] ~= nil
 
-if using_nlove then
+if love.system and love.system.getOS and love.system.getOS() == "Android" then
+  controls = require("../controls_android")
+elseif using_nlove then
   controls = require("../controls_dingoo")
 else
   controls = require("../controls_keybmouse")
@@ -21,6 +23,11 @@ colors.reset = {255,255,255}
 
 w = love.graphics.getWidth()
 h = love.graphics.getHeight()
+
+scale = {
+  x = w/320,
+  y = h/240
+}
 
 say = {
   "Whatcha' lookin at?",
@@ -40,7 +47,6 @@ for i,v in pairs(images) do
 end
 
 open_time = 1 + 0.05
-
 
 tclosed = function() return math.random(2,4) end
 topen = function()
@@ -124,6 +130,10 @@ lost_say = say[math.random(1,#say)]
 end
 
 function love.draw()
+
+  love.graphics.push()
+  love.graphics.scale(scale.x,scale.y)
+
   love.graphics.draw(im["bg"])
 
   if watching_porn() or lost then
@@ -153,6 +163,7 @@ else
 end
 
 --  draw_controls()
+  love.graphics.pop()
 
 end
 
